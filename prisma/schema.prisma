@@ -1,0 +1,394 @@
+// LIS Platform — Prisma schema (v1)
+// Multi-tenant, single-brand Laboratory Information System.
+//
+// MULTI-TENANCY MODEL (read this before you touch the data layer):
+//   Shared database, shared schema, row-level isolation by tenantId.
+//   EVERY tenant-scoped row carries tenantId, and EVERY query MUST filter by it.
+//   Never query a tenant-scoped model without a tenantId in the where clause.
+//   Enforce this in one place (see src/lib/tenant.ts), not by remembering each time.
+//   Hardening path later: Postgres Row-Level Security (RLS) policies on tenantId.
+//
+// Platform-layer models (PlatformAdmin, Tenant, Lease) sit ABOVE tenants and
+// have no tenantId. Everything else is tenant-scoped.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================================
+// PLATFORM LAYER  (the Host / leasing operator)
+// ============================================================
+
+model PlatformAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Tenant {
+  id     String       @id @default(cuid())
+  name   String // display name (the lab)
+  slug   String       @unique // url / subdomain key
+  status TenantStatus @default(PROVISIONING)
+
+  // Lab identity that compliance requires on reports.
+  // The visual brand is fixed and Host-controlled; these are identification only.
+  legalName   String?
+  address     String?
+  mlscnNumber String? // MLSCN registration / lab licence
+  labDirector String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lease       Lease?
+  sites       Site[]
+  users       User[]
+  patients    Patient[]
+  providers   Provider[]
+  tests       Test[]
+  orders      Order[]
+  specimens   Specimen[]
+  results     Result[]
+  instruments Instrument[]
+  qcRuns      QCRun[]
+  inventory   InventoryItem[]
+  auditLogs   AuditLog[]
+}
+
+enum TenantStatus {
+  PROVISIONING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+model Lease {
+  id           String      @id @default(cuid())
+  tenantId     String      @unique
+  plan         Plan        @default(FOUNDING)
+  status       LeaseStatus @default(ACTIVE)
+  monthlyPrice Int         @default(0) // in NGN kobo or whole NGN; pick one and document it
+  startedAt    DateTime    @default(now())
+  renewsAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+enum Plan {
+  FOUNDING
+  STARTER
+  GROWTH
+}
+
+enum LeaseStatus {
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  ENDED
+}
+
+// ============================================================
+// TENANT LAYER  (one lab's isolated world)
+// ============================================================
+
+model Site {
+  id       String   @id @default(cuid())
+  tenantId String
+  name     String
+  type     SiteType @default(SPOKE)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users       User[]
+  collected   Order[]      @relation("OrderCollectionSite")
+  specimens   Specimen[]   @relation("SpecimenCurrentSite")
+  instruments Instrument[]
+
+  @@index([tenantId])
+}
+
+enum SiteType {
+  HUB
+  SPOKE
+}
+
+model User {
+  id       String   @id @default(cuid())
+  tenantId String
+  email    String
+  name     String
+  role     UserRole @default(READ_ONLY)
+  siteId   String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site?  @relation(fields: [siteId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+enum UserRole {
+  LAB_ADMIN
+  ACCESSIONER
+  TECHNOLOGIST
+  PATHOLOGIST
+  REVIEWER
+  BILLING
+  READ_ONLY
+}
+
+model Patient {
+  id        String    @id @default(cuid())
+  tenantId  String
+  mrn       String // medical record number, unique within a tenant
+  firstName String
+  lastName  String
+  dob       DateTime?
+  sex       String?
+  phone     String?
+  email     String?
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, mrn])
+  @@index([tenantId])
+}
+
+model Provider {
+  id       String  @id @default(cuid())
+  tenantId String
+  name     String
+  clinic   String?
+  phone    String?
+  email    String?
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([tenantId])
+}
+
+model Test {
+  id           String  @id @default(cuid())
+  tenantId     String
+  code         String
+  name         String
+  unit         String?
+  refLow       Float?
+  refHigh      Float?
+  criticalLow  Float?
+  criticalHigh Float?
+  price        Int?
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  tenantId    String
+  patientId   String
+  providerId  String?
+  siteId      String? // where collected
+  status      OrderStatus @default(CREATED)
+  createdById String?
+  createdAt   DateTime    @default(now())
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient   Patient     @relation(fields: [patientId], references: [id])
+  provider  Provider?   @relation(fields: [providerId], references: [id])
+  site      Site?       @relation("OrderCollectionSite", fields: [siteId], references: [id])
+  items     OrderItem[]
+  specimens Specimen[]
+
+  @@index([tenantId])
+}
+
+enum OrderStatus {
+  CREATED
+  COLLECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  tenantId String
+  orderId  String
+  testId   String
+
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  test   Test    @relation(fields: [testId], references: [id])
+  result Result?
+
+  @@index([tenantId])
+}
+
+model Specimen {
+  id            String         @id @default(cuid())
+  tenantId      String
+  orderId       String
+  barcode       String
+  type          String?
+  status        SpecimenStatus @default(COLLECTED)
+  currentSiteId String?
+  collectedById String?
+  collectedAt   DateTime       @default(now())
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  currentSite Site?           @relation("SpecimenCurrentSite", fields: [currentSiteId], references: [id])
+  events      SpecimenEvent[]
+
+  @@unique([tenantId, barcode])
+  @@index([tenantId])
+}
+
+enum SpecimenStatus {
+  COLLECTED
+  IN_TRANSIT
+  RECEIVED
+  IN_PROGRESS
+  RESULTED
+  REJECTED
+}
+
+// Chain of custody: one row per handoff or status change. Append-only.
+model SpecimenEvent {
+  id         String         @id @default(cuid())
+  tenantId   String
+  specimenId String
+  status     SpecimenStatus
+  fromSiteId String?
+  toSiteId   String?
+  userId     String?
+  note       String?
+  createdAt  DateTime       @default(now())
+
+  specimen Specimen @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, specimenId])
+}
+
+model Instrument {
+  id         String   @id @default(cuid())
+  tenantId   String
+  siteId     String?
+  make       String
+  model      String
+  serial     String?
+  connection ConnType @default(MANUAL)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site    Site?    @relation(fields: [siteId], references: [id])
+  results Result[]
+  qcRuns  QCRun[]
+
+  @@index([tenantId])
+}
+
+enum ConnType {
+  SERIAL
+  NETWORK
+  MANUAL
+}
+
+model Result {
+  id            String       @id @default(cuid())
+  tenantId      String
+  orderItemId   String       @unique
+  value         String?
+  unit          String?
+  flag          ResultFlag   @default(NORMAL)
+  status        ResultStatus @default(PENDING)
+  instrumentId  String?
+  validatedById String?
+  validatedAt   DateTime?
+  releasedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderItem  OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  instrument Instrument? @relation(fields: [instrumentId], references: [id])
+
+  @@index([tenantId])
+}
+
+enum ResultFlag {
+  NORMAL
+  LOW
+  HIGH
+  CRITICAL_LOW
+  CRITICAL_HIGH
+  ABNORMAL
+}
+
+enum ResultStatus {
+  PENDING
+  VALIDATED
+  RELEASED
+  AMENDED
+}
+
+model QCRun {
+  id           String   @id @default(cuid())
+  tenantId     String
+  instrumentId String
+  testCode     String
+  level        String // e.g. "Level 1", "Level 2"
+  expected     Float?
+  observed     Float?
+  pass         Boolean  @default(true)
+  runAt        DateTime @default(now())
+  reviewedById String?
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model InventoryItem {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  lotNumber String?
+  quantity  Int       @default(0)
+  expiresAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// Tamper-evident-ish audit trail. Append-only; never update or delete rows.
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  actorId   String?
+  action    String // e.g. "result.released"
+  entity    String // e.g. "Result"
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
