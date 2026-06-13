@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
+import { Montserrat } from "next/font/google";
 import { auth, signOut } from "@/auth";
-import { NavMenu } from "@/components/NavMenu";
+import { ConditionalHeader } from "@/components/ConditionalHeader";
 import "./globals.css";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Adeva Health",
@@ -15,50 +23,18 @@ export default async function RootLayout({
 }) {
   const session = await auth();
 
+  const signOutAction = async () => {
+    "use server";
+    await signOut({ redirectTo: "/login" });
+  };
+
   return (
-    <html lang="en">
+    <html lang="en" className={montserrat.variable}>
       <body
         className="min-h-screen bg-slate-50 text-slate-900"
         suppressHydrationWarning
       >
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-            <a href="/" className="flex items-center gap-2">
-              <span className="inline-block h-6 w-6 rounded-md bg-teal-600" />
-              <span className="text-sm font-semibold tracking-tight text-slate-900">
-                Adeva Health
-              </span>
-            </a>
-            <div className="flex items-center gap-2 text-sm">
-              <NavMenu />
-              {session?.user ? (
-                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-                  <span className="text-slate-500">{session.user.email}</span>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await signOut({ redirectTo: "/login" });
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-                    >
-                      Sign out
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <a
-                  href="/login"
-                  className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-                >
-                  Sign in
-                </a>
-              )}
-            </div>
-          </div>
-        </header>
+        <ConditionalHeader session={session} signOutAction={signOutAction} />
         {children}
       </body>
     </html>
