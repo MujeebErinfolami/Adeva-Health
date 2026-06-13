@@ -121,264 +121,287 @@ function Fade({
 /* ═══════════════════════════════════════════════════════════════════════════
    NAV
 ═══════════════════════════════════════════════════════════════════════════ */
-const DROPDOWN_ITEMS = [
-  { label: "For Lab Staff",  href: "#features" },
-  { label: "For Lab Admins", href: "#features" },
-  { label: "For Patients",   href: "#features" },
-  { label: "Platform",       href: "#features" },
+const PRODUCTS_ITEMS = [
+  { title: "LIS 247",       sub: "Specimen to report workflow for lab staff",         href: "#features" },
+  { title: "Console",       sub: "Analytics and management dashboard for lab owners", href: "#features" },
+  { title: "Patient Alley", sub: "Secure result access for patients and doctors",     href: "#features" },
+  { title: "AdevaHub",      sub: "The multi-tenant platform powering all products",   href: "#features" },
 ];
 
-function NavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+const SERVICES_ITEMS = [
+  { title: "Lab Analytics",           sub: "Turnaround time, test volumes, QC pass rates" },
+  { title: "Data Management",         sub: "Structured specimen and result data pipelines" },
+  { title: "Accreditation Readiness", sub: "Audit trail, QC documentation, chain of custody" },
+  { title: "Multi-site Operations",   sub: "Hub and spoke lab network management" },
+  { title: "Result Delivery",         sub: "Structured printable reports and patient access" },
+  { title: "Inventory Intelligence",  sub: "Reagent tracking, lot traceability, expiry alerts" },
+];
+
+const ADEVA_LEFT = [
+  { title: "About",   sub: "What drives us",              href: "#" },
+  { title: "Careers", sub: "Grow your potential with us", href: "#" },
+  { title: "Contact", sub: "Ready to integrate?",         href: "#" },
+];
+
+const ADEVA_RIGHT = [
+  { title: "Team", sub: "Meet the experience behind our solutions",             href: "#" },
+  { title: "Blog", sub: "The go-to resource to get the most out of your data", href: "#" },
+];
+
+type MenuKey = "products" | "services" | "adeva";
+
+function DropdownItem({ title, sub, href = "#" }: { title: string; sub: string; href?: string }) {
   return (
     <a
       href={href}
       style={{
-        fontSize: "13px",
-        color: C.shale,
+        display: "block",
+        padding: "16px",
+        borderRadius: "8px",
         textDecoration: "none",
-        padding: "6px 12px",
-        borderRadius: "20px",
-        transition: "background 0.15s, color 0.15s",
-        whiteSpace: "nowrap" as const,
+        transition: "background 0.12s",
       }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.background = C.whisper;
-        (e.currentTarget as HTMLAnchorElement).style.color = C.graphite;
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-        (e.currentTarget as HTMLAnchorElement).style.color = C.shale;
-      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = C.whisper; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
     >
-      {children}
+      <div style={{ fontSize: "14px", fontWeight: 600, color: C.graphite, lineHeight: 1.3 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: "13px", fontWeight: 400, color: C.silver, marginTop: "4px", lineHeight: 1.4 }}>
+        {sub}
+      </div>
     </a>
   );
 }
 
+function ServiceItem({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div
+      style={{ padding: "16px", borderRadius: "8px", transition: "background 0.12s" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = C.whisper; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+    >
+      <div
+        style={{
+          width: "28px",
+          height: "28px",
+          borderRadius: "6px",
+          background: C.graphite,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: "10px",
+        }}
+      >
+        <span style={{ display: "block", width: "10px", height: "2px", background: C.white, borderRadius: "1px" }} />
+      </div>
+      <div style={{ fontSize: "14px", fontWeight: 600, color: C.graphite, lineHeight: 1.3 }}>{title}</div>
+      <div style={{ fontSize: "13px", fontWeight: 400, color: C.silver, marginTop: "4px", lineHeight: 1.4 }}>{sub}</div>
+    </div>
+  );
+}
+
 function Nav() {
-  const [dropOpen, setDropOpen] = useState(false);
-  const dropRef = useRef<HTMLDivElement>(null);
+  const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
-        setDropOpen(false);
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  function toggle(key: MenuKey) {
+    setOpenMenu((prev) => (prev === key ? null : key));
+  }
+
+  const triggerBtn = (key: MenuKey): React.CSSProperties => ({
+    fontSize: "13px",
+    fontWeight: 500,
+    color: C.graphite,
+    padding: "6px 14px",
+    borderRadius: "200px",
+    background: openMenu === key ? C.whisper : "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    transition: "background 0.15s",
+    whiteSpace: "nowrap",
+  });
+
+  const dropCard: React.CSSProperties = {
+    position: "absolute",
+    top: "calc(100% + 12px)",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: C.white,
+    borderRadius: "12px",
+    padding: "28px",
+    boxShadow: "0 8px 40px rgba(32,32,32,0.10)",
+    zIndex: 100,
+    animation: "adDropIn 0.18s ease forwards",
+  };
+
   return (
-    <nav style={{ padding: "20px 16px" }}>
+    <nav
+      ref={navRef}
+      style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "20px 32px",
+      }}
+    >
+      {/* Logo — far left */}
+      <a
+        href="/"
+        style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", flexShrink: 0 }}
+      >
+        <span
+          style={{ width: "18px", height: "18px", borderRadius: "4px", background: C.orange, display: "block", flexShrink: 0 }}
+        />
+        <span
+          style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontWeight: 600, fontSize: "14px", color: C.graphite }}
+        >
+          Adeva Health
+        </span>
+      </a>
+
+      {/* Center pill — absolutely centered */}
       <div
         style={{
-          maxWidth: "940px",
-          margin: "0 auto",
-          background: C.white,
-          border: `1px solid ${C.pearl}`,
-          borderRadius: "40px",
-          padding: "10px 20px",
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          gap: "4px",
+          background: C.white,
+          border: `1px solid ${C.pearl}`,
+          borderRadius: "200px",
+          padding: "6px 8px",
         }}
       >
-        {/* Wordmark */}
-        <a
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            textDecoration: "none",
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              width: "22px",
-              height: "22px",
-              borderRadius: "5px",
-              background: C.orange,
-              display: "block",
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontFamily: FONT,
-              fontWeight: 700,
-              fontSize: "14px",
-              color: C.graphite,
-              letterSpacing: "-0.02em",
-              whiteSpace: "nowrap",
-            }}
+        {/* Products */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => toggle("products")}
+            style={triggerBtn("products")}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = C.whisper; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = openMenu === "products" ? C.whisper : "transparent"; }}
           >
-            Adeva Health
-          </span>
-        </a>
-
-        {/* Center links — desktop only */}
-        <div
-          className="hidden md:flex"
-          style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: "2px" }}
-        >
-          {/* Features dropdown */}
-          <div ref={dropRef} style={{ position: "relative" }}>
-            <button
-              onClick={() => setDropOpen((p) => !p)}
-              style={{
-                fontSize: "13px",
-                color: dropOpen ? C.graphite : C.shale,
-                background: dropOpen ? C.whisper : "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: "6px 12px",
-                borderRadius: "20px",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                fontFamily: "inherit",
-                transition: "background 0.15s, color 0.15s",
-                whiteSpace: "nowrap",
-              } as React.CSSProperties}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = C.whisper;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = dropOpen
-                  ? C.whisper
-                  : "transparent";
-              }}
-            >
-              Features
-              <span
-                style={{
-                  fontSize: "9px",
-                  display: "inline-block",
-                  transform: dropOpen ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s ease",
-                  marginTop: "1px",
-                }}
-              >
-                ▾
-              </span>
-            </button>
-
-            {dropOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: C.white,
-                  border: `1px solid ${C.pearl}`,
-                  borderRadius: "12px",
-                  padding: "6px",
-                  minWidth: "196px",
-                  boxShadow: "0 8px 24px rgba(32,32,32,0.08)",
-                  zIndex: 100,
-                  animation: "adDropIn 0.18s ease forwards",
-                }}
-              >
-                {DROPDOWN_ITEMS.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setDropOpen(false)}
-                    style={{
-                      display: "block",
-                      padding: "8px 12px",
-                      fontSize: "13px",
-                      color: C.shale,
-                      textDecoration: "none",
-                      borderRadius: "8px",
-                      transition: "background 0.12s, color 0.12s",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLAnchorElement).style.background = C.whisper;
-                      (e.currentTarget as HTMLAnchorElement).style.color = C.graphite;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                      (e.currentTarget as HTMLAnchorElement).style.color = C.shale;
-                    }}
-                  >
-                    {item.label}
-                  </a>
+            Products
+          </button>
+          {openMenu === "products" && (
+            <div style={{ ...dropCard, minWidth: "520px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                {PRODUCTS_ITEMS.map((item) => (
+                  <DropdownItem key={item.title} {...item} />
                 ))}
               </div>
-            )}
-          </div>
-
-          <NavLink href="#how-it-works">How It Works</NavLink>
-          <NavLink href="#accreditation">Accreditation</NavLink>
+            </div>
+          )}
         </div>
 
-        {/* Right CTAs */}
-        <div
+        {/* Services */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => toggle("services")}
+            style={triggerBtn("services")}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = C.whisper; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = openMenu === "services" ? C.whisper : "transparent"; }}
+          >
+            Services
+          </button>
+          {openMenu === "services" && (
+            <div style={{ ...dropCard, minWidth: "680px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                {SERVICES_ITEMS.map((item) => (
+                  <ServiceItem key={item.title} {...item} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Adeva */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => toggle("adeva")}
+            style={triggerBtn("adeva")}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = C.whisper; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = openMenu === "adeva" ? C.whisper : "transparent"; }}
+          >
+            Adeva
+          </button>
+          {openMenu === "adeva" && (
+            <div style={{ ...dropCard, minWidth: "560px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div>
+                  {ADEVA_LEFT.map((item) => (
+                    <DropdownItem key={item.title} {...item} />
+                  ))}
+                </div>
+                <div>
+                  {ADEVA_RIGHT.map((item) => (
+                    <DropdownItem key={item.title} {...item} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+        <a
+          href="/login"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginLeft: "auto",
+            fontSize: "13px",
+            fontWeight: 500,
+            color: C.graphite,
+            textDecoration: "none",
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: `1.5px solid ${C.graphite}`,
+            background: "transparent",
+            transition: "background 0.15s",
+            whiteSpace: "nowrap" as const,
+            lineHeight: 1,
+            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = C.whisper; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
         >
-          <a
-            href="/login"
-            className="hidden md:block"
-            style={{
-              fontSize: "13px",
-              color: C.graphite,
-              textDecoration: "none",
-              padding: "7px 18px",
-              borderRadius: "20px",
-              border: `1.5px solid ${C.graphite}`,
-              transition: "background 0.15s",
-              whiteSpace: "nowrap",
-              lineHeight: 1,
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = C.whisper;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-            }}
-          >
-            Log in
-          </a>
-          <a
-            href="mailto:hello@adevahealth.com"
-            style={{
-              fontSize: "13px",
-              color: C.white,
-              textDecoration: "none",
-              padding: "7px 18px",
-              borderRadius: "20px",
-              background: C.graphite,
-              transition: "opacity 0.15s",
-              whiteSpace: "nowrap",
-              lineHeight: 1,
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.8";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
-            }}
-          >
-            Book a Demo
-          </a>
-        </div>
+          Log in
+        </a>
+        <a
+          href="mailto:hello@adevahealth.com"
+          style={{
+            fontSize: "13px",
+            fontWeight: 500,
+            color: C.white,
+            textDecoration: "none",
+            padding: "8px 20px",
+            borderRadius: "20px",
+            background: C.graphite,
+            transition: "opacity 0.15s",
+            whiteSpace: "nowrap" as const,
+            lineHeight: 1,
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.8"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
+        >
+          Book a Demo
+        </a>
       </div>
     </nav>
   );
@@ -645,11 +668,14 @@ function Hero() {
                   marginBottom: "18px",
                 }}
               >
-                Laboratory Information System · Lagos
+                Laboratory Information System
               </p>
               <h1
                 style={{
                   ...Ty.display,
+                  fontWeight: 400,
+                  lineHeight: 0.91,
+                  letterSpacing: "-0.02em",
                   marginBottom: "24px",
                 }}
               >
@@ -665,9 +691,9 @@ function Hero() {
                   marginBottom: "36px",
                 }}
               >
-                Adeva Health gives Lagos mid-tier independent labs
-                enterprise-grade tools — specimen tracking, result workflows,
-                accreditation readiness — on a simple monthly lease.
+                Adeva Health gives independent diagnostic labs
+                enterprise-grade tools: specimen tracking, result workflows,
+                accreditation readiness, on a simple monthly lease.
               </p>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <PillBtn href="mailto:hello@adevahealth.com" variant="filled">
@@ -696,15 +722,15 @@ function Hero() {
 const PROBLEMS = [
   {
     title: "Paper-based chaos",
-    body: "Manual logbooks, lost samples, and untrackable results. When something goes wrong there is no audit trail — only confusion and blame.",
+    body: "Manual logbooks, lost samples, and untrackable results. When something goes wrong there is no audit trail, only confusion and blame.",
   },
   {
     title: "Accreditation out of reach",
-    body: "MLSCN mandates digital records, QC documentation, and audit trails. Most labs lack the systems — and the budget — to comply.",
+    body: "MLSCN mandates digital records, QC documentation, and audit trails. Most labs lack the systems and budget to comply.",
   },
   {
     title: "Built for the wrong market",
-    body: "Foreign LIS platforms assume reliable power, stable internet, and in-house IT teams. Lagos labs need software built for their reality.",
+    body: "Foreign LIS platforms assume reliable power, stable internet, and in-house IT teams. Nigerian labs need software built for their reality.",
   },
 ];
 
@@ -715,7 +741,7 @@ function ProblemBand() {
         <Fade>
           <p style={{ ...Ty.caption, marginBottom: "12px" }}>The Problem</p>
           <h2 style={{ ...Ty.headingSm, marginBottom: "40px", maxWidth: "460px" }}>
-            The reality of running a lab in Lagos
+            The reality of running a lab
           </h2>
         </Fade>
         <div className="grid md:grid-cols-3 gap-5">
@@ -763,7 +789,7 @@ const HOW_STEPS = [
   {
     num: "02",
     title: "Track specimens in real time",
-    body: "Every scan advances the specimen lifecycle — collected, in transit, received, in progress, resulted. Your whole team always knows where it is.",
+    body: "Every scan advances the specimen lifecycle: collected, in transit, received, in progress, resulted. Your whole team always knows where it is.",
   },
   {
     num: "03",
@@ -829,7 +855,7 @@ function HowItWorks() {
 ═══════════════════════════════════════════════════════════════════════════ */
 const FEATURES = [
   {
-    role: "Lab Staff",
+    role: "LIS 247",
     sub: "Technicians · Phlebotomists",
     items: [
       "Quick order entry from patient record",
@@ -839,7 +865,7 @@ const FEATURES = [
     ],
   },
   {
-    role: "Lab Admin",
+    role: "Console",
     sub: "Owners · Managers",
     items: [
       "Real-time turnaround-time dashboard",
@@ -849,7 +875,7 @@ const FEATURES = [
     ],
   },
   {
-    role: "Patients",
+    role: "Patient Alley",
     sub: "Patients · Referring Doctors",
     items: [
       "Secure online access to results",
@@ -859,10 +885,10 @@ const FEATURES = [
     ],
   },
   {
-    role: "Platform",
+    role: "AdevaHub",
     sub: "Infrastructure · Compliance",
     items: [
-      "Leased SaaS — no hardware to buy or manage",
+      "Leased SaaS, no hardware to buy or manage",
       "Multi-tenant, built for Nigerian labs",
       "MLSCN-aligned tamper-evident audit log",
       "Designed for variable connectivity environments",
@@ -955,7 +981,7 @@ function FeaturesGrid() {
    ACCREDITATION HOOK
 ═══════════════════════════════════════════════════════════════════════════ */
 const ACC_POINTS = [
-  "Structured audit logs with tamper-evident hash-chain integrity — every action is verifiable.",
+  "Structured audit logs with tamper-evident hash-chain integrity: every action is verifiable.",
   "Automated delta-check and Westgard QC rules active on every result before sign-off.",
   "Pre-formatted reports aligned to MLSCN documentation standards, printable in one click.",
 ];
@@ -997,8 +1023,8 @@ function AccreditationHook() {
                   built in from day one.
                 </h2>
                 <p style={{ ...Ty.body }}>
-                  Most Lagos labs fail accreditation audits not because their
-                  science is wrong — but because they lack the digital
+                  Most independent labs fail accreditation audits not because
+                  their science is wrong, but because they lack the digital
                   infrastructure to prove it. Adeva Health gives you that
                   infrastructure.
                 </p>
@@ -1097,7 +1123,7 @@ function CTABand() {
               margin: "0 auto 36px",
             }}
           >
-            Join labs across Lagos on a platform built for the realities of
+            Join labs across Nigeria on a platform built for the realities of
             Nigerian healthcare.
           </p>
           <a
@@ -1245,6 +1271,7 @@ export default function LandingPage() {
   return (
     <div style={{ background: C.white, minHeight: "100vh" }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600&display=swap');
         @keyframes adDropIn {
           from {
             opacity: 0;
