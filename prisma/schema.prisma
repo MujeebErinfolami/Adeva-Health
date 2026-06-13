@@ -126,8 +126,10 @@ model User {
   role     UserRole @default(READ_ONLY)
   siteId   String?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  site   Site?  @relation(fields: [siteId], references: [id])
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site             Site?    @relation(fields: [siteId], references: [id])
+  validatedResults Result[] @relation("ResultValidator")
+  releasedResults  Result[] @relation("ResultReleaser")
 
   createdAt DateTime @default(now())
 
@@ -191,8 +193,9 @@ model Test {
   criticalHigh Float?
   price        Int?
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
+  reagents   TestReagent[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -320,12 +323,20 @@ model Result {
   validatedById String?
   validatedAt   DateTime?
   releasedAt    DateTime?
+  releasedById  String?
+  signedMeaning String?
+  reagentLotId  String?
+  version       Int          @default(1)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  orderItem  OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  instrument Instrument? @relation(fields: [instrumentId], references: [id])
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  instrument    Instrument?     @relation(fields: [instrumentId], references: [id])
+  validatedBy   User?           @relation("ResultValidator", fields: [validatedById], references: [id])
+  releasedBy    User?           @relation("ResultReleaser", fields: [releasedById], references: [id])
+  criticalCalls CriticalCall[]
+  versions      ResultVersion[]
 
   @@index([tenantId])
 }
@@ -346,6 +357,38 @@ enum ResultStatus {
   AMENDED
 }
 
+model CriticalCall {
+  id           String   @id @default(cuid())
+  tenantId     String
+  resultId     String
+  notifiedName String
+  notifiedBy   String
+  calledAt     DateTime @default(now())
+  readback     Boolean  @default(false)
+  note         String?
+
+  result Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([resultId])
+}
+
+model ResultVersion {
+  id        String   @id @default(cuid())
+  tenantId  String
+  resultId  String
+  value     String?
+  flag      String?
+  amendedBy String
+  amendedAt DateTime @default(now())
+  reason    String
+
+  result Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([resultId])
+}
+
 model QCRun {
   id           String   @id @default(cuid())
   tenantId     String
@@ -354,9 +397,16 @@ model QCRun {
   level        String // e.g. "Level 1", "Level 2"
   expected     Float?
   observed     Float?
-  pass         Boolean  @default(true)
-  runAt        DateTime @default(now())
-  reviewedById String?
+  pass             Boolean  @default(true)
+  mean             Float?
+  sd               Float?
+  zScore           Float?
+  rulesViolated    String[]
+  runAt            DateTime @default(now())
+  reviewedById     String?
+  correctiveAction String?
+  resolvedById     String?
+  resolvedAt       DateTime?
 
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
@@ -371,10 +421,27 @@ model InventoryItem {
   lotNumber String?
   quantity  Int       @default(0)
   expiresAt DateTime?
+  recalled  Boolean   @default(false)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  testReagents TestReagent[]
 
   @@index([tenantId])
+}
+
+model TestReagent {
+  id              String        @id @default(cuid())
+  tenantId        String
+  testId          String
+  inventoryItemId String
+  qtyPerTest      Float
+
+  test          Test          @relation(fields: [testId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([testId])
+  @@index([inventoryItemId])
 }
 
 // Tamper-evident-ish audit trail. Append-only; never update or delete rows.
@@ -386,6 +453,8 @@ model AuditLog {
   entity    String // e.g. "Result"
   entityId  String?
   meta      Json?
+  prevHash  String?
+  hash      String
   createdAt DateTime @default(now())
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])

@@ -78,6 +78,8 @@ export async function releaseOrderResults(
         entity: "Order",
         entityId: order.id,
         meta: { count: releasable.length },
+        prevHash: null,
+        hash: "legacy",
       },
     }),
   ]);

@@ -1,6 +1,11 @@
 import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
 import { assertTenant } from "./tenant";
+import { isAssayLocked } from "@/lib/qc/lockout";
+import { computeDeltaFlag } from "@/lib/results/deltaCheck";
+import { shouldAutoVerify } from "@/lib/results/autoVerify";
+import { decrementForTest } from "@/lib/inventory/consume";
+import { recordAudit } from "@/lib/audit/write";
 
 // The ordered specimen journey. Advancing always moves to the next stage.
 // REJECTED is an off-path terminal status handled separately (not in this flow).
@@ -116,10 +121,26 @@ export async function enterResult(tenantId: string, orderItemId: string, rawValu
   });
   if (!item) throw new Error("Order item not found");
 
+  const locked = await isAssayLocked(id, "", item.test.code);
+  if (locked) throw new Error("Results are locked for this assay due to a failed QC run.");
+
   const num = Number.parseFloat(rawValue);
   const flag = Number.isNaN(num) ? "NORMAL" : computeFlag(num, item.test);
 
-  return prisma.result.upsert({
+  const prior = await prisma.result.findFirst({
+    where: { orderItemId, status: { in: ["VALIDATED", "RELEASED"] } },
+    orderBy: { createdAt: "desc" },
+  });
+  const priorNum = prior?.value != null ? Number.parseFloat(prior.value) : NaN;
+  const deltaFlag =
+    !Number.isNaN(num) && !Number.isNaN(priorNum)
+      ? computeDeltaFlag(num, priorNum, 50)
+      : false;
+
+  const isCritical = flag === "CRITICAL_LOW" || flag === "CRITICAL_HIGH";
+  const status = shouldAutoVerify(flag, deltaFlag, isCritical) ? "VALIDATED" : "PENDING";
+
+  const result = await prisma.result.upsert({
     where: { orderItemId },
     create: {
       tenantId: id,
@@ -127,16 +148,32 @@ export async function enterResult(tenantId: string, orderItemId: string, rawValu
       value: rawValue,
       unit: item.test.unit,
       flag,
-      status: "VALIDATED",
-      validatedAt: new Date(),
+      status,
+      validatedAt: status === "VALIDATED" ? new Date() : null,
     },
     update: {
       value: rawValue,
       flag,
-      status: "VALIDATED",
-      validatedAt: new Date(),
+      status,
+      validatedAt: status === "VALIDATED" ? new Date() : null,
     },
   });
+
+  try {
+    await decrementForTest(id, item.testId);
+  } catch (err) {
+    console.error("Reagent decrement failed:", err);
+  }
+
+  await recordAudit({
+    tenantId: id,
+    userId: undefined,
+    action: "result.entered",
+    entity: "Result",
+    entityId: result.id,
+  });
+
+  return result;
 }
 
 export async function advanceSpecimen(tenantId: string, specimenId: string) {
