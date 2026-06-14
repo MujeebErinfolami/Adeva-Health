@@ -129,12 +129,75 @@ const PRODUCTS_ITEMS = [
 ];
 
 const SERVICES_ITEMS = [
-  { title: "Lab Analytics",           sub: "Turnaround time, test volumes, QC pass rates" },
-  { title: "Data Management",         sub: "Structured specimen and result data pipelines" },
-  { title: "Accreditation Readiness", sub: "Audit trail, QC documentation, chain of custody" },
-  { title: "Multi-site Operations",   sub: "Hub and spoke lab network management" },
-  { title: "Result Delivery",         sub: "Structured printable reports and patient access" },
-  { title: "Inventory Intelligence",  sub: "Reagent tracking, lot traceability, expiry alerts" },
+  {
+    title: "Lab Analytics",
+    sub: "Turnaround time, test volumes, QC pass rates",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1"   y="7" width="3" height="6" rx="0.5" />
+        <rect x="5.5" y="4" width="3" height="9" rx="0.5" />
+        <rect x="10"  y="1" width="3" height="12" rx="0.5" />
+      </svg>
+    ),
+  },
+  {
+    title: "Data Management",
+    sub: "Structured specimen and result data pipelines",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="7" cy="4" rx="4.5" ry="1.5" />
+        <path d="M2.5 4v6c0 .83 2.01 1.5 4.5 1.5s4.5-.67 4.5-1.5V4" />
+        <path d="M2.5 7c0 .83 2.01 1.5 4.5 1.5S11.5 7.83 11.5 7" />
+      </svg>
+    ),
+  },
+  {
+    title: "Accreditation Readiness",
+    sub: "Audit trail, QC documentation, chain of custody",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 1.5L2 3.5v3.5c0 3 2.2 5.5 5 6 2.8-.5 5-3 5-6V3.5L7 1.5z" />
+        <path d="M4.5 7l2 2 3-3" />
+      </svg>
+    ),
+  },
+  {
+    title: "Multi-site Operations",
+    sub: "Hub and spoke lab network management",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="7"    cy="2"  r="1.5" />
+        <circle cx="2.5"  cy="12" r="1.5" />
+        <circle cx="11.5" cy="12" r="1.5" />
+        <line x1="6.2" y1="3.2"  x2="3.3"  y2="10.5" />
+        <line x1="7.8" y1="3.2"  x2="10.7" y2="10.5" />
+        <line x1="4"   y1="12"   x2="10"   y2="12"   />
+      </svg>
+    ),
+  },
+  {
+    title: "Result Delivery",
+    sub: "Structured printable reports and patient access",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L8 1z" />
+        <path d="M8 1v5h4" />
+        <line x1="5" y1="9" x2="8" y2="9" />
+        <polyline points="6.5,7.5 8.5,9 6.5,10.5" />
+      </svg>
+    ),
+  },
+  {
+    title: "Inventory Intelligence",
+    sub: "Reagent tracking, lot traceability, expiry alerts",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 1L1.5 4v6L7 13l5.5-3V4L7 1z" />
+        <line x1="7" y1="1" x2="7" y2="13" />
+        <path d="M1.5 4L7 7l5.5-3" />
+      </svg>
+    ),
+  },
 ];
 
 const ADEVA_LEFT = [
@@ -174,10 +237,10 @@ function DropdownItem({ title, sub, href = "#" }: { title: string; sub: string; 
   );
 }
 
-function ServiceItem({ title, sub }: { title: string; sub: string }) {
+function ServiceItem({ title, sub, icon }: { title: string; sub: string; icon: React.ReactNode }) {
   return (
     <div
-      style={{ padding: "16px", borderRadius: "8px", transition: "background 0.12s" }}
+      style={{ padding: "16px", borderRadius: "8px", transition: "background 0.12s", display: "flex", gap: "12px", alignItems: "flex-start" }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = C.whisper; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
     >
@@ -190,13 +253,15 @@ function ServiceItem({ title, sub }: { title: string; sub: string }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: "10px",
+          flexShrink: 0,
         }}
       >
-        <span style={{ display: "block", width: "10px", height: "2px", background: C.white, borderRadius: "1px" }} />
+        {icon}
       </div>
-      <div style={{ fontSize: "14px", fontWeight: 600, color: C.graphite, lineHeight: 1.3 }}>{title}</div>
-      <div style={{ fontSize: "13px", fontWeight: 400, color: C.silver, marginTop: "4px", lineHeight: 1.4 }}>{sub}</div>
+      <div>
+        <div style={{ fontSize: "14px", fontWeight: 600, color: C.graphite, lineHeight: 1.3 }}>{title}</div>
+        <div style={{ fontSize: "13px", fontWeight: 400, color: C.silver, marginTop: "4px", lineHeight: 1.4 }}>{sub}</div>
+      </div>
     </div>
   );
 }
