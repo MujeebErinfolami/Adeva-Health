@@ -73,11 +73,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.tenantId = user.tenantId;
-        token.role = user.role;
-        token.uid = user.id;
+        if (user.tenantId) {
+          // Credentials sign-in: user object already has tenantId and role
+          token.tenantId = user.tenantId;
+          token.role = user.role;
+          token.uid = user.id;
+        } else {
+          // Google sign-in: user object has no tenantId, fetch from DB
+          const dbUser = await prisma.user.findFirst({ where: { email: token.email! } });
+          if (dbUser) {
+            token.tenantId = dbUser.tenantId;
+            token.role = dbUser.role;
+            token.uid = dbUser.id;
+          }
+        }
       }
       return token;
     },
