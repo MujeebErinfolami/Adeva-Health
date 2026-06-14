@@ -125,6 +125,8 @@ model User {
   name     String
   role     UserRole @default(READ_ONLY)
   siteId   String?
+  password String?
+  googleId String?
 
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site             Site?    @relation(fields: [siteId], references: [id])

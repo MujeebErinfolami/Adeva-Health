@@ -1,14 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-
-// DEV-GRADE AUTH. A credentials provider that checks the email against your
-// seeded users and a single shared dev password. No password hashing, no
-// per-tenant scoping by subdomain yet. Replace with real credentials (hashed
-// passwords) or OAuth before production. The point here is to get real
-// session-based tenant + role resolution working, replacing devTenantId.
-
-const DEV_PASSWORD = process.env.AUTH_DEV_PASSWORD ?? "adeva-dev";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -22,10 +16,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: async (creds) => {
         const email = String(creds?.email ?? "").trim().toLowerCase();
         const password = String(creds?.password ?? "");
-        if (!email || password !== DEV_PASSWORD) return null;
+        if (!email || !password) return null;
 
         const user = await prisma.user.findFirst({ where: { email } });
-        if (!user) return null;
+        if (!user || !user.password) return null;
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) return null;
 
         return {
           id: user.id,
@@ -36,8 +33,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        const email = user.email;
+        if (!email) return false;
+
+        const dbUser = await prisma.user.findFirst({ where: { email } });
+        if (!dbUser) return false;
+
+        if (!dbUser.googleId) {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { googleId: account.providerAccountId },
+          });
+        }
+        return true;
+      }
+      return true;
+    },
     jwt({ token, user }) {
       if (user) {
         token.tenantId = user.tenantId;

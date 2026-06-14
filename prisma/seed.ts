@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -8,7 +9,14 @@ const prisma = new PrismaClient();
 async function main() {
   const slug = "adeva-founding";
 
-  // Clean slate for this tenant (cascades to sites, users, patients, etc.)
+  const hashedPassword = await bcrypt.hash("adeva-dev", 12);
+
+  // Clean slate — delete OrderItems first because their testId FK is RESTRICT
+  // (no onDelete Cascade on the Test relation), so the tenant cascade would fail.
+  const existing = await prisma.tenant.findFirst({ where: { slug } });
+  if (existing) {
+    await prisma.orderItem.deleteMany({ where: { tenantId: existing.id } });
+  }
   await prisma.tenant.deleteMany({ where: { slug } });
 
   // The founding lab (tenant)
@@ -42,9 +50,9 @@ async function main() {
   // Staff
   await prisma.user.createMany({
     data: [
-      { tenantId: tenant.id, email: "admin@adeva.test", name: "Lab Admin", role: "LAB_ADMIN", siteId: hub.id },
-      { tenantId: tenant.id, email: "accession@adeva.test", name: "Front Desk", role: "ACCESSIONER", siteId: spoke.id },
-      { tenantId: tenant.id, email: "tech@adeva.test", name: "Bench Scientist", role: "TECHNOLOGIST", siteId: hub.id },
+      { tenantId: tenant.id, email: "admin@adeva.test",     name: "Lab Admin",       role: "LAB_ADMIN",    siteId: hub.id,   password: hashedPassword },
+      { tenantId: tenant.id, email: "accession@adeva.test", name: "Front Desk",      role: "ACCESSIONER",  siteId: spoke.id, password: hashedPassword },
+      { tenantId: tenant.id, email: "tech@adeva.test",      name: "Bench Scientist", role: "TECHNOLOGIST", siteId: hub.id,   password: hashedPassword },
     ],
   });
 
