@@ -122,7 +122,7 @@ function Fade({
    NAV
 ═══════════════════════════════════════════════════════════════════════════ */
 const PRODUCTS_ITEMS = [
-  { title: "LIS 247",       sub: "Specimen to report workflow for lab staff",         href: "#features" },
+  { title: "LIS 24/7",      sub: "Specimen to report workflow for lab staff",         href: "#features" },
   { title: "Console",       sub: "Analytics and management dashboard for lab owners", href: "#features" },
   { title: "Patient Alley", sub: "Secure result access for patients and doctors",     href: "#features" },
   { title: "AdevaHub",      sub: "The multi-tenant platform powering all products",   href: "#features" },
@@ -242,7 +242,7 @@ function Nav() {
     borderRadius: "12px",
     padding: "28px",
     boxShadow: "0 8px 40px rgba(32,32,32,0.10)",
-    zIndex: 100,
+    zIndex: 1000,
     animation: "adDropIn 0.18s ease forwards",
   };
 
@@ -730,7 +730,7 @@ const PROBLEMS = [
   },
   {
     title: "Built for the wrong market",
-    body: "Foreign LIS platforms assume reliable power, stable internet, and in-house IT teams. Nigerian labs need software built for their reality.",
+    body: "Foreign LIS platforms assume reliable power, stable internet, and in-house IT teams. Independent labs need software built for their reality.",
   },
 ];
 
@@ -855,7 +855,7 @@ function HowItWorks() {
 ═══════════════════════════════════════════════════════════════════════════ */
 const FEATURES = [
   {
-    role: "LIS 247",
+    role: "LIS 24/7",
     sub: "Technicians · Phlebotomists",
     items: [
       "Quick order entry from patient record",
@@ -889,7 +889,7 @@ const FEATURES = [
     sub: "Infrastructure · Compliance",
     items: [
       "Leased SaaS, no hardware to buy or manage",
-      "Multi-tenant, built for Nigerian labs",
+      "Multi-tenant, built for independent labs",
       "MLSCN-aligned tamper-evident audit log",
       "Designed for variable connectivity environments",
     ],
@@ -1123,8 +1123,8 @@ function CTABand() {
               margin: "0 auto 36px",
             }}
           >
-            Join labs across Nigeria on a platform built for the realities of
-            Nigerian healthcare.
+            Join labs across the continent on a platform built for the realities
+            of modern healthcare.
           </p>
           <a
             href="mailto:hello@adevahealth.com"
