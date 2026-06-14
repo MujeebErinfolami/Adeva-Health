@@ -45,14 +45,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email) return false;
 
         const dbUser = await prisma.user.findFirst({ where: { email } });
-        if (!dbUser) return false;
 
-        if (!dbUser.googleId) {
-          await prisma.user.update({
-            where: { id: dbUser.id },
-            data: { googleId: account.providerAccountId },
+        if (dbUser) {
+          if (!dbUser.googleId) {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { googleId: account.providerAccountId },
+            });
+          }
+        } else {
+          const tenant = await prisma.tenant.findFirst();
+          if (!tenant) return false;
+
+          await prisma.user.create({
+            data: {
+              name: user.name ?? email,
+              email,
+              googleId: account.providerAccountId,
+              role: "READ_ONLY",
+              tenantId: tenant.id,
+              password: null,
+            },
           });
         }
+
         return true;
       }
       return true;
