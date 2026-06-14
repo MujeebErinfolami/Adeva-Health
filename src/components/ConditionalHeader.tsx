@@ -12,7 +12,7 @@ export function ConditionalHeader({
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
-  if (pathname === "/" || pathname === "/login" || pathname === "/signup") return null;
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/products")) return null;
 
   return (
     <header className="border-b border-slate-200 bg-white">

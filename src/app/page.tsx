@@ -122,10 +122,10 @@ function Fade({
    NAV
 ═══════════════════════════════════════════════════════════════════════════ */
 const PRODUCTS_ITEMS = [
-  { title: "LIS 24/7",      sub: "Specimen to report workflow for lab staff",         href: "#features" },
-  { title: "Console",       sub: "Analytics and management dashboard for lab owners", href: "#features" },
-  { title: "Patient Alley", sub: "Secure result access for patients and doctors",     href: "#features" },
-  { title: "AdevaHub",      sub: "The multi-tenant platform powering all products",   href: "#features" },
+  { title: "LIS 24/7",      sub: "Specimen to report workflow for lab staff",         href: "/products/lis-247" },
+  { title: "Console",       sub: "Analytics and management dashboard for lab owners", href: "/products/console" },
+  { title: "Patient Alley", sub: "Secure result access for patients and doctors",     href: "/products/patient-alley" },
+  { title: "AdevaHub",      sub: "The multi-tenant platform powering all products",   href: "/products/adeva-hub" },
 ];
 
 const SERVICES_ITEMS = [
